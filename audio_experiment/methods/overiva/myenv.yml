@@ -1,0 +1,17 @@
+name: overiva_env
+dependencies:
+  - python
+  - numpy=1.26
+  - scipy>=0.18.0
+  - mkl-service
+  - matplotlib
+  - pandas
+  - ipyparallel
+  - pip
+  - pip:
+    - seaborn
+    - gitpython
+    - pyroomacoustics
+    - sounddevice
+    - samplerate
+    - mir_eval

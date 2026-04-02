@@ -1,0 +1,175 @@
+clc;
+
+result_path = ['..',filesep,'cvxCSV_task',filesep,'outputFiles',filesep];
+if (exist(result_path,'dir') ~= 7)
+    disp('unzipping precomputed results')
+    unzip(['..',filesep,'cvxCSV_task',filesep,'outputFiles.zip'],['..',filesep,'cvxCSV_task',filesep]);
+    disp('done');
+end
+
+N = 5000;
+d = 5;
+T = 10;
+
+trimm_mean_perc = 2;
+l_width = 3;
+l_styles = [":",":","-","-","none"];
+
+
+names = ["bbICE","CSV","CvxCSV","init.","CvxCSV algorithm","BOGICE"];
+
+
+%% in terms of a
+clearvars -except  trimm_mean_perc N d T Nb fig_1 fig_2 fig_3 ax1 ax2 l_width l_styles names result_path ;
+
+soi_y = 0;
+soi_a_all = 0.1:0.01:4;
+tau=0;
+
+Cz = repmat(eye(d-1),1,1,T);
+
+for idx_a = 1:length(soi_a_all)
+    soi_a = soi_a_all(idx_a);
+
+    [   ISR_dB_BICE(idx_a), ...
+        ISR_dB_CSV(idx_a), ...
+        ISR_dB_CSV_nonstat(idx_a), ...
+        ISR_dB_linearCSV(idx_a)] = ISR_fcn(N, T, d, Cz, soi_a, soi_y, tau);
+end
+
+
+[algs_ISR_a, ~, ~, algs_a] = collectData([result_path,'cfg_alpha_eye_(dot)_m'],'soi_a');
+
+fig_1 = figure(1);
+clf(fig_1);
+ax1 = subplot(1,3,1);
+plot(soi_a_all, ISR_dB_BICE,'DisplayName',names(1),'LineWidth',l_width,'LineStyle',l_styles(1)); hold on;
+plot(soi_a_all, ISR_dB_CSV_nonstat,'DisplayName',names(2),'LineWidth',l_width,'LineStyle',l_styles(3))
+plot(soi_a_all, ISR_dB_linearCSV,'DisplayName',names(3),'LineWidth',l_width,'Color','Black','LineStyle',l_styles(4))
+plot(algs_a, squeeze(10*log10(trimmean(algs_ISR_a(:,1,:), trimm_mean_perc)))','DisplayName',names(4),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','square');
+plot(algs_a, squeeze(10*log10(trimmean(algs_ISR_a(:,2,:), trimm_mean_perc)))','DisplayName',names(5),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','o');
+plot(algs_a, squeeze(10*log10(trimmean(algs_ISR_a(:,3,:), trimm_mean_perc)))','DisplayName',names(6),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','+');
+xlabel('\alpha')
+ylabel('ISR [dB]')
+
+title(['\tau = ',num2str(tau), ', \gamma = ',num2str(soi_y)]);
+set(gca,"FontSize",20)
+set(gca,"LineWidth",2)
+set(gca,"FontWeight",'Bold');
+
+set(gca,'YLim',get(gca,'YLim') + [0,5]); 
+xline(1,'--k','LineWidth',2);
+
+% fig_1
+
+
+%% in terms of y
+clearvars -except trimm_mean_perc N d T Nb fig_1 fig_2 fig_3 ax1 ax2 l_width l_styles names result_path;
+
+soi_y_all = 0:0.001:0.999;
+soi_a = 1;
+tau=0;
+
+Cz = repmat(eye(d-1),1,1,T);
+
+for idx_y = 1:length(soi_y_all)
+    soi_y = soi_y_all(idx_y);
+     [  ISR_dB_BICE(idx_y), ...
+        ISR_dB_CSV(idx_y), ...
+        ISR_dB_CSV_nonstat(idx_y), ...
+        ISR_dB_linearCSV(idx_y)] = ISR_fcn(N, T, d, Cz, soi_a, soi_y, tau);
+end
+
+[algs_ISR_y, ~, ~, algs_y] = collectData([result_path,'cfg_gamma_eye_(dot)_m'],'soi_y');
+
+
+ax2 = subplot(1,3,2);
+title('sigma_soi = ones(T,1)')
+plot(soi_y_all, ISR_dB_BICE,'DisplayName',names(1),'LineWidth',l_width,'LineStyle',l_styles(1)); hold on;
+plot(soi_y_all, ISR_dB_CSV_nonstat,'DisplayName',names(2),'LineWidth',l_width,'LineStyle',l_styles(3))
+plot(soi_y_all, ISR_dB_linearCSV,'DisplayName',names(3),'LineWidth',l_width,'Color','Black','LineStyle',l_styles(4))
+plot(algs_y, squeeze(10*log10(trimmean(algs_ISR_y(:,1,:), trimm_mean_perc)))','DisplayName',names(4),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','square');
+plot(algs_y, squeeze(10*log10(trimmean(algs_ISR_y(:,2,:), trimm_mean_perc)))','DisplayName',names(5),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','o');
+plot(algs_y, squeeze(10*log10(trimmean(algs_ISR_y(:,3,:), trimm_mean_perc)))','DisplayName',names(6),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','+');
+xlabel('\gamma')
+ylabel('ISR [dB]')
+
+title(['\tau = ',num2str(tau), ', \alpha = ',num2str(soi_a)]);
+set(gca,"FontSize",20)
+set(gca,"LineWidth",2)
+set(gca,"FontWeight",'Bold');
+
+
+
+
+%% in terms of tau
+clearvars -except trimm_mean_perc N d T Nb fig_1 fig_2 fig_3 ax1 ax2 l_width l_styles names result_path;
+
+soi_y = 0;
+soi_a = 1;
+tau_all = 0:0.001:0.999; 
+tau = 0;
+
+Cz = repmat(eye(d-1),1,1,T);
+
+for idx_tau = 1:length(tau_all)
+    tau = tau_all(idx_tau);
+    
+     [  ISR_dB_BICE(idx_tau), ...
+        ISR_dB_CSV(idx_tau), ...
+        ISR_dB_CSV_nonstat(idx_tau), ...
+        ISR_dB_linearCSV(idx_tau)] = ISR_fcn(N, T, d, Cz, soi_a, soi_y, tau);
+end
+
+[algs_ISR_tau, ~, ~, algs_tau] = collectData([result_path,'cfg_tau_eye_(dot)_m'],'tau');
+
+
+
+ax3 = subplot(1,3,3);
+title('sigma_soi = ones(T,1)')
+plot(tau_all, ISR_dB_BICE,'DisplayName',names(1),'LineWidth',l_width,'LineStyle',l_styles(1)); hold on;
+plot(tau_all, ISR_dB_CSV_nonstat,'DisplayName',names(2),'LineWidth',l_width,'LineStyle',l_styles(3))
+plot(tau_all, ISR_dB_linearCSV,'DisplayName',names(3),'LineWidth',l_width,'Color','Black','LineStyle',l_styles(4))
+plot(algs_tau, squeeze(10*log10(trimmean(algs_ISR_tau(:,1,:), trimm_mean_perc)))','DisplayName',names(4),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','square');
+plot(algs_tau, squeeze(10*log10(trimmean(algs_ISR_tau(:,2,:), trimm_mean_perc)))','DisplayName',names(5),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','o');
+plot(algs_tau, squeeze(10*log10(trimmean(algs_ISR_tau(:,3,:), trimm_mean_perc)))','DisplayName',names(6),'LineWidth',l_width,'LineStyle',l_styles(5),'Marker','+');
+xlabel('\tau')
+ylabel('ISR [dB]')
+
+title(['\gamma = ',num2str(soi_y), ', \alpha = ',num2str(soi_a)]);
+set(gca,"FontSize",20)
+set(gca,'LineWidth',2)
+set(gca,"FontWeight",'Bold');
+
+set(ax1,'YLim',[-50,5]); 
+set(ax2,'YLim',get(ax1,'YLim')); 
+set(ax3,'YLim',get(ax1,'YLim'));
+
+l = legend('FontSize',15,'Location','southeast','Orientation','vertical');
+
+
+set(fig_1,'Position',[2035, 940, 1687, 318])
+
+%% Post-process
+pause(2);
+set(ax1,'Position',get(ax1,'Position')+[-0.08,0,0,0])
+set(ax2,'Position',get(ax2,'Position')+[-0.09,0,0,0])
+set(ax3,'Position',get(ax3,'Position')+[-0.1,0,0,0])
+
+set(fig_1.Children(1),'Position',[.83    0.45    0.1    0.2]);
+
+fig_name = 'res';
+
+saveas(fig_1,[fig_name,'.eps'],'epsc');
+
+% system(['epstopdf ',[fig_name,'.eps '],[fig_name,'.pdf']])
+% system(['pdfcrop ',[fig_name,'.pdf']]);
+
+
+
+
+
+
+
+
+
